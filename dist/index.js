@@ -45,6 +45,6 @@ async function bootstrap() {
 }
 // default route check the home page
 app.get("/", (req, res) => {
-    res.send("Hello server is running!");
+    res.send("Portfolio server is running!");
 });
 bootstrap();

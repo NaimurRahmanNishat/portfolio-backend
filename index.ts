@@ -27,9 +27,6 @@ app.use("/api/projects", allProjectRoute)
 import blogRoutes from "./src/blog/blog.route";
 app.use("/api/blogs", blogRoutes);
 
-// routes
-import aboutRoutes from "./src/about/about.route";
-app.use("/api/abouts", aboutRoutes);
 
 async function bootstrap() {
   try {
