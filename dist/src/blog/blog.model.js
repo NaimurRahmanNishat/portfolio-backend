@@ -49,12 +49,16 @@ var BlogCategory;
     BlogCategory["IndustryNews"] = "Industry News";
 })(BlogCategory || (exports.BlogCategory = BlogCategory = {}));
 const blogSchema = new mongoose_1.Schema({
-    title: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true, maxLength: [120, 'Title cannot exceed 120 characters'] },
+    slug: { type: String, required: true, unique: true, lowercase: true },
     subtitle: { type: String, trim: true },
-    image: { type: String, required: true },
+    authorImage: { type: String },
     category: { type: String, enum: Object.values(BlogCategory), required: true },
-    content: { type: String, required: true },
-    thumbnail: { type: String, default: 'https://mailrelay.com/wp-content/uploads/2018/03/que-es-un-blog-1.png' },
+    content: { type: String, required: true, minLength: [10, 'Content should be at least 10 characters long'] },
+    thumbnail: {
+        type: String,
+        default: 'https://mailrelay.com/wp-content/uploads/2018/03/que-es-un-blog-1.png'
+    },
     isPublished: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
 }, {

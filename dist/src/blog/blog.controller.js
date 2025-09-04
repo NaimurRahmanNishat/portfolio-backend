@@ -33,34 +33,35 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.allBlogs = exports.createBlog = void 0;
+exports.getSingleBlog = exports.allBlogs = exports.createBlog = void 0;
 const ResponseHandler_1 = require("../utils/ResponseHandler");
 const blog_model_1 = __importStar(require("./blog.model"));
 const createBlog = async (req, res) => {
     try {
-        const { title, slug, subtitle, category, content, thumbnail, isPublished, isFeatured } = req.body;
+        const { title, slug, subtitle, authorImage, category, content, thumbnail, isPublished = true, isFeatured = false } = req.body;
         // Category validation
         if (!Object.values(blog_model_1.BlogCategory).includes(category)) {
             return (0, ResponseHandler_1.errorResponse)(res, 400, "Invalid category");
         }
-        // Duplicate title check
-        const existingBlog = await blog_model_1.default.findOne({ title });
-        if (existingBlog) {
-            return (0, ResponseHandler_1.errorResponse)(res, 400, "Blog with this title already exists");
-        }
         // Auto-generate slug if not provided
-        const finalSlug = slug ||
-            title
-                .toLowerCase()
-                .replace(/ /g, "-")
-                .replace(/[^\w-]+/g, "");
+        const finalSlug = slug || title
+            .toLowerCase()
+            .replace(/[^a-z0-9 -]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-');
+        // Duplicate title/slug check
+        const existingBlog = await blog_model_1.default.findOne({ $or: [{ title }, { slug: finalSlug }] });
+        if (existingBlog) {
+            return (0, ResponseHandler_1.errorResponse)(res, 400, "Blog with this title or slug already exists");
+        }
         const blog = new blog_model_1.default({
             title,
             slug: finalSlug,
             subtitle,
+            authorImage,
             category,
             content,
-            thumbnail,
+            thumbnail: thumbnail || 'https://mailrelay.com/wp-content/uploads/2018/03/que-es-un-blog-1.png',
             isPublished,
             isFeatured,
         });
@@ -76,12 +77,11 @@ exports.createBlog = createBlog;
 const allBlogs = async (req, res) => {
     try {
         const search = req.query.search;
-        const category = req.query.category;
         const sortBy = req.query.sortBy || "createdAt";
-        const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
+        const category = req.query.category;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        // filter blog
+        // filter blog (search by title, subtitle, content, category, slug)
         let filter = {};
         if (search) {
             filter.$or = [
@@ -92,25 +92,53 @@ const allBlogs = async (req, res) => {
                 { slug: { $regex: search, $options: "i" } },
             ];
         }
-        // filter by category
-        if (category) {
+        // sort blog
+        let sortOption = {};
+        switch (sortBy) {
+            case "title-asc":
+                sortOption = { title: 1 };
+                break;
+            case "title-desc":
+                sortOption = { title: -1 };
+                break;
+            case "oldest":
+                sortOption = { createdAt: 1 };
+                break;
+            case "newest":
+            default:
+                sortOption = { createdAt: -1 };
+                break;
+        }
+        // Category filter
+        if (category && Object.values(blog_model_1.BlogCategory).includes(category)) {
             filter.category = category;
         }
-        // pagination
+        // Calculate skip for pagination
         const skip = (page - 1) * limit;
-        // blog fetch
-        const blogs = await blog_model_1.default.find(filter).sort({ [sortBy]: sortOrder }).skip(skip).limit(limit);
-        // total blog count
+        const blogs = await blog_model_1.default.find(filter).sort(sortOption).skip(skip).limit(limit);
         const totalBlogs = await blog_model_1.default.countDocuments(filter);
-        return (0, ResponseHandler_1.successResponse)(res, 200, "Blogs fetched successfully", {
-            total: totalBlogs,
-            page,
-            totalPages: Math.ceil(totalBlogs / limit),
-            blogs,
-        });
+        const totalPages = Math.ceil(totalBlogs / limit);
+        return (0, ResponseHandler_1.successResponse)(res, 200, "Blogs fetched successfully", { blogs, total: totalBlogs, page, totalPages, limit });
     }
     catch (error) {
         return (0, ResponseHandler_1.errorResponse)(res, 500, "Failed to fetch blogs");
     }
 };
 exports.allBlogs = allBlogs;
+const getSingleBlog = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return (0, ResponseHandler_1.errorResponse)(res, 400, "Blog id is required");
+        }
+        const blog = await blog_model_1.default.findById(id);
+        if (!blog) {
+            return (0, ResponseHandler_1.errorResponse)(res, 404, "Blog not found");
+        }
+        return (0, ResponseHandler_1.successResponse)(res, 200, "Blog fetched successfully", blog);
+    }
+    catch (error) {
+        return (0, ResponseHandler_1.errorResponse)(res, 500, "Failed to fetch blog");
+    }
+};
+exports.getSingleBlog = getSingleBlog;
