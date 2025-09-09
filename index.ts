@@ -10,7 +10,7 @@ const port: number = 8000;
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://portfolio-frontend-ten-coral.vercel.app"],
     credentials: true,
   })
 );
