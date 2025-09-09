@@ -13,7 +13,7 @@ const port = 8000;
 // middleware
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://portfolio-frontend-ten-coral.vercel.app"],
     credentials: true,
 }));
 // routes
